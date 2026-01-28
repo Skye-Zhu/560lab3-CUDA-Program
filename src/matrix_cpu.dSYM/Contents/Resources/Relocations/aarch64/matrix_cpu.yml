@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/skyezhu/Desktop/1/dsci560-lab3/src/matrix_cpu'
+relocations:     []
+...
