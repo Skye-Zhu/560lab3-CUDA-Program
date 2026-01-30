@@ -1,4 +1,3 @@
-// src/matrix_cublas.cu
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
@@ -63,34 +62,49 @@ int main(int argc, char **argv) {
   const float alpha = 1.0f;
   const float beta  = 0.0f;
 
-  // 6) 计时（只计 cuBLAS 乘法本身）
   cudaEvent_t start, stop;
   CUDA_CHECK(cudaEventCreate(&start));
   CUDA_CHECK(cudaEventCreate(&stop));
 
-  CUDA_CHECK(cudaEventRecord(start));
 
-  // 7) 调用 cublasSgemm
-  //    ⚠️ 注意：cuBLAS 默认使用“列主序”（column-major）
-  //    我们的数组是按 C 语言常见的“行主序”（row-major）填的
-  //    解决方案：交换 A/B 的顺序，等价实现 C(row-major) = A*B
-  //    也就是这里用：B 和 A 交换传入
+  // 6) 计时（只计 cuBLAS 乘法本身）
+// ---- warm-up: avoid cuBLAS lazy init & GPU clock ramp-up affecting timing
   CUBLAS_CHECK(
     cublasSgemm(handle,
+              CUBLAS_OP_N, CUBLAS_OP_N,
+              N, N, N,
+              &alpha,
+              d_B, N,
+              d_A, N,
+              &beta,
+              d_C, N)
+  );
+  CUDA_CHECK(cudaDeviceSynchronize());
+
+// ---- timed repeats
+  int R = 20;  // repeat count (increase if you want more stable)
+  CUDA_CHECK(cudaEventRecord(start));
+
+  for (int r = 0; r < R; r++) {
+    CUBLAS_CHECK(
+      cublasSgemm(handle,
                 CUBLAS_OP_N, CUBLAS_OP_N,
                 N, N, N,
                 &alpha,
-                d_B, N,   // 注意：这里先传 B
-                d_A, N,   // 再传 A
+                d_B, N,
+                d_A, N,
                 &beta,
                 d_C, N)
-  );
+    );
+  }
 
   CUDA_CHECK(cudaEventRecord(stop));
   CUDA_CHECK(cudaEventSynchronize(stop));
 
   float ms = 0.0f;
   CUDA_CHECK(cudaEventElapsedTime(&ms, start, stop));
+  ms /= R;  // average ms per GEMM
+
 
   // 8) 把结果拷回 CPU（可选，但一般做以保证流程完整）
   CUDA_CHECK(cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost));
