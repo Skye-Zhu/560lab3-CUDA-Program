@@ -30,9 +30,6 @@ img_buf = np.ascontiguousarray(image.ravel(), dtype=np.uint32)
 ker_buf = np.ascontiguousarray(kernel.ravel(), dtype=np.int32)
 out_buf = np.ascontiguousarray(output.ravel(), dtype=np.uint32)
 
-print("image:", img_buf.dtype, "contig:", img_buf.flags['C_CONTIGUOUS'])
-print("kernel:", ker_buf.dtype, "contig:", ker_buf.flags['C_CONTIGUOUS'])
-print("output:", out_buf.dtype, "contig:", out_buf.flags['C_CONTIGUOUS'])
 
 start = time.time()
 lib.gpu_convolution(img_buf, ker_buf, out_buf, M, N)
