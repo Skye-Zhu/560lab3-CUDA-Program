@@ -1,7 +1,6 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 
-// ---- CUDA kernel (unchanged) ----
 __global__ void conv2d_gpu(
     unsigned int *image,
     unsigned int *kernel,
