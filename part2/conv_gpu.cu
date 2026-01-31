@@ -1,6 +1,13 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 
+// Export macro: Windows needs dllexport, Linux doesn't
+#ifdef _WIN32
+  #define DLL_EXPORT extern "C" __declspec(dllexport)
+#else
+  #define DLL_EXPORT extern "C"
+#endif
+
 __global__ void conv2d_gpu(
     unsigned int *image,
     unsigned int *kernel,
@@ -27,19 +34,15 @@ __global__ void conv2d_gpu(
     }
 }
 
-//simple CUDA error checker
+// Simple CUDA error checker
 static void cuda_check(cudaError_t err, const char* msg) {
     if (err != cudaSuccess) {
-        // Print error to help debugging
         printf("[CUDA ERROR] %s: %s\n", msg, cudaGetErrorString(err));
     }
 }
 
 // This is what Python ctypes will call
-// Windows export: __declspec(dllexport)
-// Prevent name mangling: extern "C"
-extern "C" __declspec(dllexport)
-void gpu_convolution(
+DLL_EXPORT void gpu_convolution(
     unsigned int *image,
     unsigned int *kernel,
     unsigned int *output,
