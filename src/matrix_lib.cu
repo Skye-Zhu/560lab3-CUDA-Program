@@ -101,3 +101,36 @@ DLL_EXPORT void gpu_matrix_multiply(const float* h_A,
   cudaFree(d_B);
   cudaFree(d_C);
 }
+
+// 2D Convolution Kernel
+extern "C"
+void gpu_convolution(
+    unsigned int *h_image,
+    unsigned int *h_kernel,
+    unsigned int *h_output,
+    int M, int N
+) {
+    unsigned int *d_image, *d_kernel, *d_output;
+
+    size_t img_size = M * M * sizeof(unsigned int);
+    size_t ker_size = N * N * sizeof(unsigned int);
+
+    cudaMalloc(&d_image, img_size);
+    cudaMalloc(&d_kernel, ker_size);
+    cudaMalloc(&d_output, img_size);
+
+    cudaMemcpy(d_image, h_image, img_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_kernel, h_kernel, ker_size, cudaMemcpyHostToDevice);
+
+    dim3 block(16, 16);
+    dim3 grid((M + 15) / 16, (M + 15) / 16);
+
+    conv2d_gpu<<<grid, block>>>(d_image, d_kernel, d_output, M, N);
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(h_output, d_output, img_size, cudaMemcpyDeviceToHost);
+
+    cudaFree(d_image);
+    cudaFree(d_kernel);
+    cudaFree(d_output);
+}
