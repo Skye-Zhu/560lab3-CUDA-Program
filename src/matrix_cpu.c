@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 
   double sec = (double)(end - start) / CLOCKS_PER_SEC;
 
-  //防止编译器优化掉计算
+
   double checksum = 0.0;
   for (int i = 0; i < N * N; i++) {
     checksum += C[i];

@@ -3,7 +3,6 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
-// --- CUDA 错误检查（你先当模板用，不用深究）
 #define CUDA_CHECK(call)                                                     \
   do {                                                                       \
     cudaError_t err = (call);                                                \
@@ -24,7 +23,7 @@
     }                                                                        \
   } while (0)
 
-// CPU helper：填充随机数
+
 static void fill_random(float *X, int n) {
   for (int i = 0; i < n; i++) X[i] = (float)(rand() % 100) / 100.0f;
 }
@@ -33,7 +32,7 @@ int main(int argc, char **argv) {
   int N = (argc > 1) ? atoi(argv[1]) : 1024;
   size_t bytes = (size_t)N * (size_t)N * sizeof(float);
 
-  // 1) 在 CPU 上分配并生成 A, B
+
   float *h_A = (float*)malloc(bytes);
   float *h_B = (float*)malloc(bytes);
   float *h_C = (float*)malloc(bytes);
@@ -43,22 +42,22 @@ int main(int argc, char **argv) {
   fill_random(h_A, N*N);
   fill_random(h_B, N*N);
 
-  // 2) 在 GPU 上分配 d_A, d_B, d_C
+
   float *d_A = NULL, *d_B = NULL, *d_C = NULL;
   CUDA_CHECK(cudaMalloc((void**)&d_A, bytes));
   CUDA_CHECK(cudaMalloc((void**)&d_B, bytes));
   CUDA_CHECK(cudaMalloc((void**)&d_C, bytes));
 
-  // 3) 把 A, B 从 CPU 拷贝到 GPU
+
   CUDA_CHECK(cudaMemcpy(d_A, h_A, bytes, cudaMemcpyHostToDevice));
   CUDA_CHECK(cudaMemcpy(d_B, h_B, bytes, cudaMemcpyHostToDevice));
 
-  // 4) 创建 cuBLAS handle（相当于“打开库的上下文”）
+
   cublasHandle_t handle;
   CUBLAS_CHECK(cublasCreate(&handle));
 
-  // 5) cuBLAS 的矩阵乘法参数
-  //    C = alpha * A * B + beta * C
+
+  //C = alpha * A * B + beta * C
   const float alpha = 1.0f;
   const float beta  = 0.0f;
 
@@ -67,8 +66,6 @@ int main(int argc, char **argv) {
   CUDA_CHECK(cudaEventCreate(&stop));
 
 
-  // 6) 计时（只计 cuBLAS 乘法本身）
-// ---- warm-up: avoid cuBLAS lazy init & GPU clock ramp-up affecting timing
   CUBLAS_CHECK(
     cublasSgemm(handle,
               CUBLAS_OP_N, CUBLAS_OP_N,
@@ -81,8 +78,8 @@ int main(int argc, char **argv) {
   );
   CUDA_CHECK(cudaDeviceSynchronize());
 
-// ---- timed repeats
-  int R = 20;  // repeat count (increase if you want more stable)
+
+  int R = 20;  // repeat count 
   CUDA_CHECK(cudaEventRecord(start));
 
   for (int r = 0; r < R; r++) {
@@ -106,13 +103,13 @@ int main(int argc, char **argv) {
   ms /= R;  // average ms per GEMM
 
 
-  // 8) 把结果拷回 CPU（可选，但一般做以保证流程完整）
+
   CUDA_CHECK(cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost));
 
-  // 输出统一格式（便于你填表/画图）
+
   printf("impl=CUBLAS,N=%d,time_ms=%.3f\n", N, ms);
 
-  // 9) 清理资源
+
   CUBLAS_CHECK(cublasDestroy(handle));
   CUDA_CHECK(cudaEventDestroy(start));
   CUDA_CHECK(cudaEventDestroy(stop));

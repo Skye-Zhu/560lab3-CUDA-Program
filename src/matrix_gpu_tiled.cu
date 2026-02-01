@@ -15,12 +15,12 @@
     }                                                                        \
   } while (0)
 
-// -------------------- Tiled CUDA Kernel
+
 __global__ void matmul_tiled_kernel(const float *A,
                                     const float *B,
                                     float *C,
                                     int N) {
-  // shared memory：block 内所有 thread 共享
+
   __shared__ float As[TILE_WIDTH][TILE_WIDTH];
   __shared__ float Bs[TILE_WIDTH][TILE_WIDTH];
 
@@ -32,30 +32,30 @@ __global__ void matmul_tiled_kernel(const float *A,
 
   float value = 0.0f;
 
-  // 一次处理 A/B 的一个 tile
+
   for (int m = 0; m < (N + TILE_WIDTH - 1) / TILE_WIDTH; m++) {
 
-    // 把 A 的一个 tile 搬进 shared memory
+
     if (row < N && (m * TILE_WIDTH + tx) < N)
       As[ty][tx] = A[row * N + m * TILE_WIDTH + tx];
     else
       As[ty][tx] = 0.0f;
 
-    // 把 B 的一个 tile 搬进 shared memory
+
     if (col < N && (m * TILE_WIDTH + ty) < N)
       Bs[ty][tx] = B[(m * TILE_WIDTH + ty) * N + col];
     else
       Bs[ty][tx] = 0.0f;
 
-    // 等待 block 内所有 thread 都完成加载
+
     __syncthreads();
 
-    // 在 shared memory 里做乘加
+
     for (int k = 0; k < TILE_WIDTH; k++) {
       value += As[ty][k] * Bs[k][tx];
     }
 
-    // 确保所有 thread 用完 shared memory 再进入下一轮
+
     __syncthreads();
   }
 
@@ -63,7 +63,7 @@ __global__ void matmul_tiled_kernel(const float *A,
     C[row * N + col] = value;
 }
 
-// -------------------- CPU helper
+
 static void fill_random(float *X, int n) {
   for (int i = 0; i < n; i++)
     X[i] = (float)(rand() % 100) / 100.0f;
