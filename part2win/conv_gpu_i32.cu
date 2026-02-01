@@ -34,14 +34,13 @@ __global__ void conv2d_gpu_i32(
     }
 }
 
-// simple CUDA error checker
+
 static void cuda_check(cudaError_t err, const char* msg) {
     if (err != cudaSuccess) {
         printf("[CUDA ERROR] %s: %s\n", msg, cudaGetErrorString(err));
     }
 }
 
-// Python ctypes will call this
 DLL_EXPORT void gpu_convolution_i32(
     const int32_t *image,
     const int32_t *kernel,
@@ -62,7 +61,6 @@ DLL_EXPORT void gpu_convolution_i32(
     cuda_check(cudaMemcpy(d_image, image, img_bytes, cudaMemcpyHostToDevice), "cudaMemcpy image H2D");
     cuda_check(cudaMemcpy(d_kernel, kernel, ker_bytes, cudaMemcpyHostToDevice), "cudaMemcpy kernel H2D");
 
-    // Optional: clear output
     cuda_check(cudaMemset(d_output, 0, img_bytes), "cudaMemset d_output");
 
     dim3 block(16, 16);

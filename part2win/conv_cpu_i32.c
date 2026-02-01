@@ -1,15 +1,21 @@
 #include <stdint.h>
 
 #ifdef _WIN32
-  #define DLL_EXPORT extern "C" __declspec(dllexport)
+  #ifdef __cplusplus
+    #define DLL_EXPORT extern "C" __declspec(dllexport)
+  #else
+    #define DLL_EXPORT __declspec(dllexport)
+  #endif
 #else
-  #define DLL_EXPORT extern "C"
+  #ifdef __cplusplus
+    #define DLL_EXPORT extern "C"
+  #else
+    #define DLL_EXPORT
+  #endif
 #endif
 
 
-// image: int32 (from grayscale 0..255)
-// kernel: int32 (may contain negative values)
-// output: int32
+
 void conv2d_cpu_i32(
     const int32_t *image,
     const int32_t *kernel,
@@ -18,7 +24,7 @@ void conv2d_cpu_i32(
 ) {
     int offset = N / 2;
 
-    // initialize output to 0 (optional, but safer)
+    // initialize output to 0
     for (int i = 0; i < M * M; i++) output[i] = 0;
 
     for (int i = offset; i < M - offset; i++) {

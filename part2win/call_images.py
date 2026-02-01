@@ -7,14 +7,13 @@ import numpy as np
 from PIL import Image
 
 
-# Put an image in the same folder as this script, e.g. input.png / input.jpg
 DEFAULT_INPUT = "input.png"
 
-# Performance sweep (assignment requirement)
+# Performance sweep 
 MS = [512, 1024, 2048]
 NS = [3, 5, 7]
 
-# Image demo (for report figures)
+
 DEMO_M = 1024
 DEMO_N = 3
 
@@ -56,22 +55,11 @@ def load_dll():
 
 
 def load_grayscale_i32(path: str, M: int) -> np.ndarray:
-    """
-    Load image -> grayscale -> resize to MxM -> int32 [0..255]
-    """
     img = Image.open(path).convert("L").resize((M, M))
     return np.array(img, dtype=np.int32)
 
 
 def save_i32_as_png(arr_i32: np.ndarray, out_path: str, mode: str):
-    """
-    Convert int32 output matrix to an 8-bit grayscale image for visualization.
-
-    mode:
-      - 'linear': clamp to [0,255]
-      - 'edge': abs -> normalize to [0,255]
-      - 'blur_div': divide by divisor (e.g. 9) then clamp
-    """
     x = arr_i32.astype(np.int32)
 
     if mode == "linear":
@@ -116,12 +104,6 @@ def kernel_sobel_x_3x3() -> np.ndarray:
 
 
 def make_edge_kernel_N(N: int) -> np.ndarray:
-    """
-    Create an edge-detection-like kernel for N=3/5/7.
-    For N=3: Sobel-X.
-    For N=5/7: a simple left-negative / right-positive operator with stronger center row.
-    (Good enough for assignment and supports negative values.)
-    """
     if N == 3:
         return kernel_sobel_x_3x3()
 
@@ -196,7 +178,7 @@ def main():
     lib = load_dll()
 
  
-    print("=== Demo images (blur/sharpen/edge) ===")
+    print("Demo images (blur/sharpen/edge)")
     image_demo = load_grayscale_i32(img_path, DEMO_M)
     Image.fromarray(image_demo.astype(np.uint8), mode="L").save(
         os.path.join(out_dir, f"input_M{DEMO_M}.png")
@@ -215,7 +197,7 @@ def main():
         print(f"[GPU] {name}: avg_time={t_gpu:.6f}s checksum={chk_gpu} saved={out_path}")
 
 
-    print("\n=== Performance sweep (CPU vs GPU) using EDGE filter ===")
+    print("\nPerformance sweep (CPU vs GPU) using EDGE filter")
     rows = []
 
     for M in MS:
@@ -245,10 +227,6 @@ def main():
                 "gpu_checksum": chk_gpu,
             })
 
-            # Optional: save one representative output image per (M,N)
-            # (Usually not needed; report typically needs only a few example images.)
-            # If you want, uncomment:
-            # save_i32_as_png(out_gpu, os.path.join(out_dir, f"edge_gpu_M{M}_N{N}.png"), "edge")
 
     # Save CSV
     csv_path = os.path.join(here, "perf_conv.csv")

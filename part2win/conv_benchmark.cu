@@ -11,9 +11,6 @@
 #define TILE 16
 #endif
 
-// -------------------------------
-// CUDA error check
-// -------------------------------
 #define CUDA_CHECK(call) do {                                   \
   cudaError_t err = (call);                                     \
   if (err != cudaSuccess) {                                     \
@@ -29,11 +26,6 @@ static inline long long checksum_i32(const int32_t* a, int n) {
   return s;
 }
 
-// -------------------------------
-// PGM (P5) read/write (8-bit)
-// Input: reads P5 pgm, returns uint8 pixels
-// Output: write uint8 pixels to P5 pgm
-// -------------------------------
 static uint8_t* read_pgm_p5(const char* path, int* w, int* h) {
   FILE* f = fopen(path, "rb");
   if (!f) { fprintf(stderr, "Failed to open %s\n", path); return nullptr; }
@@ -45,7 +37,7 @@ static uint8_t* read_pgm_p5(const char* path, int* w, int* h) {
     return nullptr;
   }
 
-  // skip comments
+
   int c = fgetc(f);
   while (c == '#') {
     while (c != '\n' && c != EOF) c = fgetc(f);
@@ -94,11 +86,7 @@ static bool write_pgm_p5(const char* path, const uint8_t* data, int w, int h) {
   return true;
 }
 
-// visualize int32 output as uint8
-// mode:
-//  - "linear": clamp [0,255]
-//  - "edge": abs -> normalize to [0,255]
-//  - "blur_div": divide by div then clamp
+
 static void visualize_i32_to_u8(const int32_t* in, uint8_t* out, int M,
                                 const char* mode, int div_for_blur) {
   if (strcmp(mode, "linear") == 0) {
@@ -139,12 +127,7 @@ static void visualize_i32_to_u8(const int32_t* in, uint8_t* out, int M,
   }
 }
 
-// -------------------------------
-// CPU conv (int32)
-// image: int32 [0..255]
-// kernel: int32 (may have negative)
-// output: int32
-// -------------------------------
+
 static void conv2d_cpu_i32(const int32_t* image, const int32_t* kernel, int32_t* output, int M, int N) {
   int offset = N / 2;
   // zero init
@@ -165,9 +148,7 @@ static void conv2d_cpu_i32(const int32_t* image, const int32_t* kernel, int32_t*
   }
 }
 
-// -------------------------------
-// GPU conv kernel (int32)
-// -------------------------------
+
 __global__ void conv2d_gpu_i32(const int32_t* image, const int32_t* kernel, int32_t* output, int M, int N) {
   int x = blockIdx.x * blockDim.x + threadIdx.x; // row
   int y = blockIdx.y * blockDim.y + threadIdx.y; // col
@@ -225,9 +206,7 @@ static float run_gpu_once(const int32_t* h_img, const int32_t* h_ker, int32_t* h
   return ms / 1000.0f; // seconds
 }
 
-// -------------------------------
-// Kernels
-// -------------------------------
+
 static std::vector<int32_t> kernel_blur_3() {
   // sum=9
   return {1,1,1, 1,1,1, 1,1,1};
@@ -251,27 +230,18 @@ static std::vector<int32_t> make_edge_kernel_N(int N) {
   return k;
 }
 
-// -------------------------------
-// Main
-// Usage (Windows):
-//   conv_benchmark.exe input_M1024.pgm
-// It will also try input_M512.pgm and input_M2048.pgm in the same folder.
-// -------------------------------
 int main(int argc, char** argv) {
   const int Ms[3] = {512, 1024, 2048};
   const int Ns[3] = {3, 5, 7};
 
   // Determine base directory and input name pattern
-  // We expect files: input_M512.pgm, input_M1024.pgm, input_M2048.pgm
   std::string base_dir = ".";
   if (argc >= 2) {
-    // if user passed a file, use its folder as base_dir
     std::string p = argv[1];
     size_t pos = p.find_last_of("/\\");
     if (pos != std::string::npos) base_dir = p.substr(0, pos);
   }
 
-  // Create output dir
 #ifdef _WIN32
   std::string out_dir = base_dir + "\\out_purecuda";
   std::string csv_path = base_dir + "\\perf_conv_purecuda.csv";
@@ -279,7 +249,6 @@ int main(int argc, char** argv) {
   std::string out_dir = base_dir + "/out_purecuda";
   std::string csv_path = base_dir + "/perf_conv_purecuda.csv";
 #endif
-  // best-effort create dir
 #ifdef _WIN32
   system((std::string("if not exist \"") + out_dir + "\" mkdir \"" + out_dir + "\"").c_str());
 #else
@@ -294,7 +263,6 @@ int main(int argc, char** argv) {
   }
   fprintf(csv, "M,N,cpu_time_sec,gpu_time_sec,speedup,cpu_checksum,gpu_checksum\n");
 
-  // ---------- demo images for report (M=1024, N=3, 3 filters) ----------
   {
 #ifdef _WIN32
     std::string in_demo = base_dir + "\\input_M1024.pgm";
@@ -318,7 +286,7 @@ int main(int argc, char** argv) {
       };
 
       for (auto &d : demos) {
-        // warmup once (avoid init cost)
+        // warmup once
         run_gpu_once(img_i32.data(), d.ker.data(), out_gpu.data(), M, N);
 
         float t = run_gpu_once(img_i32.data(), d.ker.data(), out_gpu.data(), M, N);
@@ -341,7 +309,6 @@ int main(int argc, char** argv) {
     }
   }
 
-  // ---------- performance sweep (3 Ms x 3 Ns) using EDGE kernel ----------
   for (int mi = 0; mi < 3; mi++) {
     int M = Ms[mi];
 
